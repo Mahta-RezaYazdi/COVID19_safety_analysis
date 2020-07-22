@@ -1,0 +1,353 @@
+---
+title: "covid19_safety_measures"
+author: "Mahta Reza Yazdi"
+date: "7/17/2020"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = F, message = F, warning = F)
+
+# set of tools for manipulating data sets.
+library(dplyr)
+# data visualization package 
+library(ggplot2)
+# set of functions designed to make working with strings
+library(stringr)
+# read excel files
+library(readxl)
+# 3D pie charts
+library(plotrix)
+```
+
+```{r}
+# # # importing datasets
+Infogears_COVID_data <- read_excel("covid-06-27-2020.xlsx")
+country_wise_latest_news <- read.csv("datasets_494766_1344285_country_wise_latest.csv") 
+```
+
+```{r}
+# just keep the data about Armenia in the country_wise_latest_news dataset
+Armenia_latest_news <- country_wise_latest_news[country_wise_latest_news$Country.Region == "Armenia", ]
+
+# # # organize the infogears dataset
+
+# replace all "didNotLefts" to "didNotLeave" in lefHomeTimes
+Infogears_COVID_data <- Infogears_COVID_data %>%
+  mutate(leftHomeTimes = ifelse(leftHomeTimes == "didNotLeft", "didNotLeave", leftHomeTimes))
+
+# replace all "notWantToShare" to "notShared"
+Infogears_COVID_data <- Infogears_COVID_data %>%
+  mutate(gender = ifelse(gender == "notWantToShare", "notShared", gender))
+
+# add leftNotForWork to the dataset
+Infogears_COVID_data <- Infogears_COVID_data %>%
+  mutate(leftNotForWork = (as.numeric(leftForExercise) + 
+                             as.numeric(leftForOther) + 
+                             as.numeric(leftForShopping)))
+
+# add Person_Wellness depending on having symptoms
+Infogears_COVID_data <- Infogears_COVID_data %>%
+  mutate(Person_Wellness = ifelse(noSymptoms == 1, "No symptoms", "Some symptoms"))
+
+```
+
+```{r}
+# # # set up factors (categorical variables)
+
+# no sypmtoms, some symptoms
+Infogears_COVID_data$Person_Wellness <- 
+  as.factor(Infogears_COVID_data$Person_Wellness)
+
+# negative, notTested, positive
+Infogears_COVID_data$antibodyTest <- 
+  as.factor(Infogears_COVID_data$antibodyTest)
+
+# doNotKnow, haveDirectContact
+Infogears_COVID_data$exposureLevel <-
+  as.factor(Infogears_COVID_data$exposureLevel)
+
+# female, male, notShared, notWantToShare, other
+Infogears_COVID_data$gender <-
+  as.factor(Infogears_COVID_data$gender)
+
+# chronicIssues, noIssues, someIssues
+Infogears_COVID_data$healthIssues <-
+  as.factor(Infogears_COVID_data$healthIssues)
+
+# didNotLeave, oneTime, twoTimesOrMore
+Infogears_COVID_data$leftHomeTimes <-
+  as.factor(Infogears_COVID_data$leftHomeTimes)
+
+# noImpact, significantImpact, someImpact
+Infogears_COVID_data$mentalHealthImpact <- 
+  as.factor(Infogears_COVID_data$mentalHealthImpact)
+
+# reorder the mentalHealthImpact's levels
+levels(Infogears_COVID_data$mentalHealthImpact) <- c("noImpact", "someImpact", "significantImpact")
+
+# awaitingResults, negative, notTested, positive
+Infogears_COVID_data$virusTest <- 
+  as.factor(Infogears_COVID_data$virusTest)
+
+# 0, 1
+Infogears_COVID_data$bodyAche <- 
+  as.factor(Infogears_COVID_data$bodyAche)
+
+# 0, 1
+Infogears_COVID_data$diarrhea <- 
+  as.factor(Infogears_COVID_data$diarrhea)
+
+# 0, 1
+Infogears_COVID_data$difficultyBreathing <- 
+  as.factor(Infogears_COVID_data$difficultyBreathing)
+
+# 0, 1
+Infogears_COVID_data$disorientation <- 
+  as.factor(Infogears_COVID_data$disorientation)
+
+# 0, 1
+Infogears_COVID_data$fatigue <- 
+  as.factor(Infogears_COVID_data$fatigue)
+
+# 0, 1
+Infogears_COVID_data$headAche <- 
+  as.factor(Infogears_COVID_data$headAche)
+
+# 0, 1
+Infogears_COVID_data$irritatedEyes <- 
+  as.factor(Infogears_COVID_data$irritatedEyes)
+
+# 0, 1
+Infogears_COVID_data$lossOfSmell <- 
+  as.factor(Infogears_COVID_data$lossOfSmell)
+
+# 0, 1
+Infogears_COVID_data$persistentCough <- 
+  as.factor(Infogears_COVID_data$persistentCough)
+
+# 0, 1
+Infogears_COVID_data$soreThroat <- 
+  as.factor(Infogears_COVID_data$soreThroat)
+
+# 0, 1
+Infogears_COVID_data$soreThroat <- 
+  as.factor(Infogears_COVID_data$soreThroat)
+
+# 0, 1
+Infogears_COVID_data$temperature <- 
+  as.factor(Infogears_COVID_data$temperature)
+
+# 0, 1
+Infogears_COVID_data$leftForExercise <- 
+  as.factor(Infogears_COVID_data$leftForExercise)
+
+# 0, 1
+Infogears_COVID_data$leftForShopping <- 
+  as.factor(Infogears_COVID_data$leftForShopping)
+
+# 0, 1
+Infogears_COVID_data$leftForWork <- 
+  as.factor(Infogears_COVID_data$leftForWork)
+
+# ??? faceCovering
+```
+# Healthy and Safe Workplaces during COVID19 Pandemic
+
+&nbsp;&nbsp;&nbsp;&nbsp;As the world continues to fight the spread of COVID19, the “stay-home” orders are now gradually lifting and employers and organizations are looking toward bringing workers back into the workplace. I believe the process for bringing workers back needs to be carefully and thoughtfully planned to care for community which it is one of the most current COVID19 challenges, for these reasons some data analysis is needed to be done to assist employers in developing policy guidelines for workplace-level risk assessments and implementation of preventive and protective measures according to a hierarchy of controls.   
+
+&nbsp;&nbsp;&nbsp;&nbsp;Infogears COVID19 dataset is mainly used to do the analysis in this report. Infogears has decided to collect this dataset to help local communities track important data, such as mask usage, stay home, symptoms and mental health. Infogears believes that since symptoms come before positive case identification, therefore are predictive. It's outcome is that predicted coming up cases increase or decrease in a local area. 
+
+
+&nbsp;&nbsp;&nbsp;&nbsp;The second dataset that has been used in this report is https://www.kaggle.com/imdevskp/corona-virus-report. This dataset is taken from kaggle.com. Around 400 analysis have been done according to this dataset, such as forecasting, visualization and comparison, and effects of temperature and humidity on the spread of COVID19.
+
+&nbsp;&nbsp;&nbsp;&nbsp;The main hypotheses of this report is that currently as the workplaces are not completely safe and since COVID19 can be predictive, it is also possible to utilize those measures to develop a healthier and safer workplace during the pandemic by having preventive and protective policy guidelines. It is also important to take the mental consequences of the COVID19 more seriously since it has severely affected the mental well-being of many people all around the world.  
+
+## Sources/Datasets
+  * Infogears COVID19 dataset
+  * https://www.kaggle.com/imdevskp/corona-virus-report
+  * https://www.starlingminds.com/resources/blogs/5-reasons-companies-should-promote-mental-health-at-work/
+  * https://plan-international.org/emergencies/covid-19-faqs-girls-women
+  * https://www.fsg.org/blog/seven-key-issues-affecting-women-and-girls-during-covid-19-pandemic
+
+\newpage
+# An individual who might have COVID19, for any reasons, should not go to the workplace.
+
+## 1. Wellness of Employees
+
+&nbsp;&nbsp;&nbsp;&nbsp;The following bar chart represents the wellness of the people who leave
+their houses to go to work at least once during the day. 
+
+```{r}
+# extract the employees from the data
+Infogears_employees <- Infogears_COVID_data %>%
+  filter(leftForWork == 1)
+```
+
+```{r, fig.width = 4, fig.height = 4}
+leftHomeTimes_wellness_plot <- Infogears_employees %>%
+  ggplot(aes(x = leftHomeTimes,
+             fill = Person_Wellness)) + 
+  theme_bw() + 
+  labs(title = "Employees Wellness & Left Home Times", 
+       y = "Count of employees", 
+       x = "Left home times") + 
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1)) +
+  scale_x_discrete(labels=c("Once", "Twice or more")) + 
+  scale_fill_manual(values = c("green", "red"), name = "Employees's wellness") 
+
+leftHomeTimes_wellness_plot + 
+  geom_bar(color = "white", size = 0.5, width = 0.6, alpha = 0.5) 
+```
+  
+&nbsp;&nbsp;&nbsp;&nbsp;The above-mentioned bar chart depicts that around 83% of people who go to work do not have any
+COVID19 symptoms, and the number of people who leave their homes once is relatively larger than 
+those who go out twice or more. However, unfortunately, around 17% of the employees who leave their homes once or more during the day to go to work actually do have some COVID19 symptoms. It should not be neglected as COVID19 can spread easily and rapidly.  Employers should make sure that **an individual who has COVID19 symptoms should not go to the workplace**, and support them by, first, letting them know that they can return to work later, and second, if possible, assigning them some remote work to do, so that they won't conceal their health's situations just because of the fear of losing their jobs.   
+
+```{r, comment=NA}
+# filter data to have only the people who left home to go to work 
+wentToWork <- Infogears_COVID_data %>% 
+  filter(leftForWork == 1) 
+    
+
+wentToWork_wellness_talbe <- table(wentToWork$Person_Wellness)
+
+wentToWork_wellness_matrix <- as.matrix(wentToWork_wellness_talbe)
+colnames(wentToWork_wellness_matrix) <- "percent"
+# prop.table(wentToWork_wellness_matrix, 2)
+```
+## 2. Employees' Exposure Level of COVID19 
+
+&nbsp;&nbsp;&nbsp;&nbsp;The following bar charts represent the employees' wellness by their exposure level of COVID19  who go to workplace during the pandemic.   
+  
+```{r, fig.width = 4, fig.height = 4}
+
+leftHomeTimes_wellness_plot + 
+  facet_wrap(~ factor(exposureLevel, labels = c("Not known", "Has contact"))) +
+  geom_bar(position = position_dodge(),
+           color = "white", 
+           size = 0.5, 
+           width = 0.9, 
+           alpha = 0.5) + 
+  labs(title = "Employees Wellness by exposure level")
+```
+
+&nbsp;&nbsp;&nbsp;&nbsp;According to the above-mentioned bar charts, around 1% of people who
+do have some symptoms and have direct contact with or take care of a positive COVID19 patient leave their homes and go to work at least once during the day. **Employers should make sure that people who do have high exposure level to COVID19 should not come to workplace as much as possilbe.** If for any reasons this is not possible , as the risk of exposure to COVID-19 in the workplace depends on the likelihood of coming within 1 meter of others, in having frequent physical contact with people who may be infected with COVID-19, and through contact with contaminated surfaces and objects, employers should make sure social distancing policy is being followed and provide them separate office space. 
+
+```{r, comment=NA}
+# filter data to have only the people who left home to go to work 
+wentToWork_havingSymotoms <- wentToWork %>%
+  filter(Person_Wellness == "Some symptoms")
+
+wentToWork_esposure_talbe <- table(wentToWork_havingSymotoms$exposureLevel)
+
+wentToWork_esposure_matrix <- as.matrix(wentToWork_esposure_talbe)
+colnames(wentToWork_esposure_matrix) <- "percent"
+
+# prop.table(wentToWork_esposure_matrix, 2)
+```
+# Companies Should Promote Good Mental Health in the Workplace during COVID19 pandemic.
+
+&nbsp;&nbsp;&nbsp;&nbsp;According to the following pie chart, Due to the stress, anxiety, and uncertainty brought on by COVID-19, it has significantly impacted mental health and stress level of roughly 60% employees, also 20% of the employees claimed that COVID19 pandemic somehow has negatively affected their mental well-being, meaning they are experiencing symptoms of psychological distress, which, if left untreated, will lead them on the pathway to burnout and depression. This vividly indicates that chances are a mental health pandemic will follow as a result of COVID-19.
+
+```{r, fig.width = 4, fig.height = 4}
+Infogears_employees %>%
+  ggplot(aes(x = "", fill = mentalHealthImpact)) + 
+  labs(title = "COVID19 Effects on Eployees' Mental Health") +
+  scale_fill_manual(values = c("green", "blue", "red"),
+                    name = "Mental Health Impact",
+                    label = c("No Impact", "Some Impact", "Significant Impact")) + 
+  geom_bar(color = "black", size = 0.3, alpha = 0.6) + 
+  coord_polar(theta = "y", start = 0) + 
+  theme_void() 
+```
+
+&nbsp;&nbsp;&nbsp;&nbsp;The next pie chart shows that small ratio of positive COVID19 patients die from it, however according to the previous chart it has negatively affected around 80% of the people, which proves that COVID19 pandemic has had relatively more worldwide mental consequences.
+
+```{r, fig.width = 4, fig.height = 4}
+# remove all the features except "Recovered", "Deaths", "Active")
+country_wise_latest_news <- read.csv("datasets_494766_1344285_country_wise_latest.csv") 
+country_wise_latest_news <- country_wise_latest_news[, c("Active", "Deaths", "Recovered")]
+active_count <- sum(country_wise_latest_news$Active)
+deaths_count <- sum(country_wise_latest_news$Deaths)
+recoverd_count <- sum(country_wise_latest_news$Recovered)
+
+# Plot the chart.
+pie3D(c(active_count, deaths_count, recoverd_count),
+      explode=0.2,
+      radius = 1,
+      labels = c("Active", "Deaths", "Recovered"),
+      main = "Worldwide COVID19 cases' status Rate", 
+      col=c("blue","red","green"))
+```
+
+```{r, comment=NA}
+wentToWork_mentalHealth_table <- table(wentToWork$mentalHealthImpact)
+
+wentToWork_mentalHealth_matrix <- as.matrix(wentToWork_mentalHealth_table)
+colnames(wentToWork_mentalHealth_matrix) <- "percent"
+
+
+# prop.table(wentToWork_mentalHealth_matrix, 2)
+```
+&nbsp;&nbsp;&nbsp;&nbsp;The below chart shows that COVID19 pandemic can still have unfavorable impacts on the stress level of the employees even who have been tested negative for COVID19 and don't have any symptoms, moreover, unfortunately, almost all of the employees who have been tested negative but still have some COVID19 symptoms are suffering from stress and anxiety.
+Another interesting fact that can be interpreted from the following chart is that, COVID19 pandemic has relatively huge negative mental impact on the people who do not have neither any symptoms nor direct access to a positive COVID19 patient. In other words, the people who have low exposure level of COVID19 have still been under stress, therefore, COVID19 pandemic can be viewed more as a severe mental pandemic.
+
+```{r, fig.height = 4}
+Infogears_employees %>%
+  filter(virusTest == c("negative", "notTested"), 
+         exposureLevel == "doNotKnow") %>%
+  ggplot(aes(x = Person_Wellness, fill = mentalHealthImpact)) +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1)) +
+  facet_grid(factor(exposureLevel, labels = c("Does't know")) ~ 
+               factor(virusTest, labels = c("Negative", "Not tested")))+
+  labs(title = "COVID19 Impacts on Eployees' Mental Health",
+       y = "Count of employees",
+       x = "Person's wellness") +
+  scale_fill_manual(values = c("green", "blue", "red"),
+                    name = "COVID19 Mental Health Impact",
+                    label = c("No Impact", "Some Impact", "Significant Impact")) +
+  geom_bar(position = position_dodge(), color = "white", size = 0.3, width = 1, alpha = 0.5)
+```
+  
+&nbsp;&nbsp;&nbsp;&nbsp;It will definitely take employers to help alleviate the impact of COVID-19 related stress, anxiety, and depression can have on their colleagues and employees. It goes without saying that employee well-being is critical to a business’s success. Without healthy and productive employees, maybe organizations without the resources to ride the fallout of COVID-19 will likely not survive or recover their business costs. For these reasons, Organizations should look at implementing initiatives around policy creation, communication, training resources, and early-intervention treatment: This can include creating policies and mandates around mental health at a corporate level; sharing resources through internal marketing channels to promote awareness; giving management and HR the training to identify issues and handle them successfully; and, providing employees with self-help tools and programs.
+
+# COVID19 Employment Law must be Fairly Conducted Based on Gender Equality.
+
+&nbsp;&nbsp;&nbsp;&nbsp;The next following bar charts indicates that COVID19 pandemic has had more negative mental effects on female employees rather than male employees who don't have direct contact to positive COVID19 patients, on the other hand, women tend to have better
+control over their mental well-being when they are in higher exposure level of COVID19 comparing to men.  
+
+```{r, fig.height = 4}
+# to have a nice visualisation fig.width = 4 us omited.
+Infogears_COVID_data %>%
+  filter(
+    leftForWork == 0,
+    gender == c("female", "male")) %>%
+  ggplot(aes(x = gender, fill = mentalHealthImpact)) +
+  facet_wrap(~ factor(exposureLevel, labels = c("Not known", "Has direct contanct"))) +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1)) +
+  scale_fill_manual(values = c("green", "blue", "red"),
+                    name = "COVID19 Mental Health Impact",
+                    label = c("No Impact", "Some Impact", "Significant Impact")) +
+  geom_bar(position = position_fill(), color = "white", size = 0.3, width = 1, alpha = 0.6) + 
+  labs(title = "Gender and COVID19 Mental Health Impacts", 
+         y = " ",
+         x = "Gender")
+```
+
+&nbsp;&nbsp;&nbsp;&nbsp;This analysis clearly indicates than gender is a critical determinant of mental health. To make the best out of COVID19 pandemic, governments and employers can revise the laws and regulations with gender equality, especially COVID19 employment law, in order to have healthier workplaces and societies.
+
+
+&nbsp;&nbsp;&nbsp;&nbsp;In conclusion, COVID19 is not just a virus pandemic, but also a huge mental pandemic.Currently, people with very high level of exposure of COVID19 go to work which definitely increases both the number of COVID19 positive total cases and concerns about the virus. Governments and employers play a very important role both on the pace of the COVID19 spread and their employees' mental well-being. Employees need their support more than ever.It is essential to have predictive and preventive work guidelines such as: 
+
+  * Employees with direct contact with a positive COVID19 patient should not come to workplace.  
+  * Supporting staff who need to self-isolate.  
+  * Support their well-being and mental health and understand that they are under pressure.   
+  * Arrange for employees with high level of exposure to COVID19 to work from home, if they're well enough to work.  
+
+  
+
+
